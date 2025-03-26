@@ -1,0 +1,17 @@
+<div class="card h-100 shadow-sm artist-card">
+  <img [src]="getArtistImage()" class="card-img-top" alt="{{ getArtistName() }}" height="200" style="object-fit: cover;">
+  <div class="card-body">
+    <h5 class="card-title">{{ getArtistName() }}</h5>
+    <p class="card-text" *ngIf="artist?.nationality">{{ artist.nationality }}</p>
+    <p class="card-text" *ngIf="artist?.location">{{ artist.location }}</p>
+    <p class="card-text text-muted" *ngIf="artist?.birthday">
+      {{ artist.birthday }}{{ artist.deathday ? ' - ' + artist.deathday : '' }}
+    </p>
+    <p class="card-text text-muted" *ngIf="artist?.description && !artist.birthday">
+      {{ artist.description | slice:0:100 }}{{ artist.description.length > 100 ? '...' : '' }}
+    </p>
+  </div>
+  <div class="card-footer bg-transparent">
+    <button class="btn btn-outline-primary w-100">View Details</button>
+  </div>
+</div>

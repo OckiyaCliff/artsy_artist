@@ -1,0 +1,59 @@
+<div class="row mb-4">
+  <div class="col-md-8 mx-auto">
+    <div class="card">
+      <div class="card-body">
+        <h2 class="card-title text-center mb-4">Search for Artists</h2>
+        
+        <form (ngSubmit)="searchArtists()" class="mb-4">
+          <div class="input-group">
+            <input 
+              type="text" 
+              class="form-control" 
+              placeholder="Enter artist name (e.g., Pablo Picasso, Vincent van Gogh)" 
+              [(ngModel)]="searchQuery" 
+              name="searchQuery"
+              required>
+            <button 
+              class="btn btn-primary" 
+              type="submit">
+              Search
+            </button>
+          </div>
+          
+          <div *ngIf="error" class="alert alert-danger mt-3">
+            {{ error }}
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Loading Spinner -->
+<div *ngIf="loading" class="text-center my-5">
+  <div class="spinner-border text-primary" role="status">
+    <span class="visually-hidden">Loading...</span>
+  </div>
+  <p class="mt-2">Searching for artists...</p>
+</div>
+
+<!-- Artist Results -->
+<div *ngIf="artists.length > 0" class="row row-cols-1 row-cols-md-3 g-4 mb-5">
+  <div *ngFor="let artist of artists" class="col">
+    <app-artist-card 
+      [artist]="artist" 
+      (click)="selectArtist(artist)"
+      [class.selected]="selectedArtist && selectedArtist._links.self.href === artist._links.self.href">
+    </app-artist-card>
+  </div>
+</div>
+
+<!-- No Results Message -->
+<div *ngIf="!loading && artists.length === 0 && searchQuery && !error" class="alert alert-info text-center my-4">
+  No artists found matching your search criteria.
+</div>
+
+<!-- Selected Artist Details -->
+<div *ngIf="selectedArtist" class="mt-4">
+  <app-artist-details [artist]="selectedArtist"></app-artist-details>
+</div>

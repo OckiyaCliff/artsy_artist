@@ -1,0 +1,28 @@
+.artwork-card {
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  
+  &:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1) !important;
+  }
+  
+  .card-img-top {
+    background-color: #f8f9fa;
+  }
+  
+  .card-title {
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  
+  .card-text {
+    margin-bottom: 0.25rem;
+    
+    &.small {
+      font-size: 0.85rem;
+    }
+  }
+}

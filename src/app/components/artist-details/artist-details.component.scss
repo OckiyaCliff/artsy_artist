@@ -1,0 +1,47 @@
+.card {
+  border-radius: 0.5rem;
+  overflow: hidden;
+}
+
+.card-header {
+  background-color: #f8f9fa;
+  
+  .nav-tabs {
+    border-bottom: none;
+    
+    .nav-link {
+      color: #6c757d;
+      border: none;
+      padding: 0.5rem 1rem;
+      
+      &:hover {
+        color: #007bff;
+      }
+      
+      &.active {
+        color: #007bff;
+        background-color: transparent;
+        border-bottom: 2px solid #007bff;
+      }
+    }
+  }
+}
+
+h2 {
+  margin-bottom: 1rem;
+  color: #333;
+}
+
+h3 {
+  color: #444;
+}
+
+h4 {
+  color: #555;
+  margin-top: 1.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.img-fluid {
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}

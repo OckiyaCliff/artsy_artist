@@ -1,0 +1,11 @@
+<div class="card h-100 shadow-sm artwork-card">
+  <img [src]="getArtworkImage()" class="card-img-top" alt="{{ getArtworkTitle() }}" height="180" style="object-fit: cover;">
+  <div class="card-body">
+    <h5 class="card-title">{{ getArtworkTitle() }}</h5>
+    <p class="card-text text-muted" *ngIf="artwork?.date">{{ getArtworkDate() }}</p>
+    <p class="card-text small" *ngIf="artwork?.medium">{{ getArtworkMedium() }}</p>
+    <p class="card-text small" *ngIf="artwork?.collecting_institution">
+      <strong>Collection:</strong> {{ artwork.collecting_institution }}
+    </p>
+  </div>
+</div>
