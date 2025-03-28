@@ -26,148 +26,60 @@ if (distExists) {
   console.log('Warning: dist/artsy-app directory not found. Run "npm run build" to create it.');
 }
 
-// Mock data for artists
-const mockArtists = [
-  {
-    id: 'pablo-picasso',
-    name: 'Pablo Picasso',
-    birthday: '1881',
-    deathday: '1973',
-    nationality: 'Spanish',
-    biography: 'Pablo Picasso was a Spanish painter, sculptor, printmaker, ceramicist, and theatre designer who spent most of his adult life in France. One of the most influential artists of the 20th century, he is known for co-founding the Cubist movement.',
-    imageUrl: 'https://d32dm0rphc51dk.cloudfront.net/i3rCA3IaKE-cLBnc-U5swQ/large.jpg'
-  },
-  {
-    id: 'vincent-van-gogh',
-    name: 'Vincent van Gogh',
-    birthday: '1853',
-    deathday: '1890',
-    nationality: 'Dutch',
-    biography: 'Vincent Willem van Gogh was a Dutch post-impressionist painter who posthumously became one of the most famous and influential figures in Western art history.',
-    imageUrl: 'https://d32dm0rphc51dk.cloudfront.net/F9DTHbYXeqTqFW2vJjjbEQ/large.jpg'
-  },
-  {
-    id: 'claude-monet',
-    name: 'Claude Monet',
-    birthday: '1840',
-    deathday: '1926',
-    nationality: 'French',
-    biography: 'Claude Monet was a French painter and founder of impressionist painting who is seen as a key precursor to modernism, especially in his attempts to paint nature as he perceived it.',
-    imageUrl: 'https://d32dm0rphc51dk.cloudfront.net/IG8ZLvVmZgQiTn2zK0Bp8w/large.jpg'
-  },
-  {
-    id: 'leonardo-da-vinci',
-    name: 'Leonardo da Vinci',
-    birthday: '1452',
-    deathday: '1519',
-    nationality: 'Italian',
-    biography: 'Leonardo di ser Piero da Vinci was an Italian polymath of the High Renaissance who was active as a painter, draughtsman, engineer, scientist, theorist, sculptor, and architect.',
-    imageUrl: 'https://d32dm0rphc51dk.cloudfront.net/0-QXL43Ox2QgwZ0nNtQlUQ/large.jpg'
-  },
-  {
-    id: 'frida-kahlo',
-    name: 'Frida Kahlo',
-    birthday: '1907',
-    deathday: '1954',
-    nationality: 'Mexican',
-    biography: 'Frida Kahlo was a Mexican painter known for her many portraits, self-portraits, and works inspired by the nature and artifacts of Mexico.',
-    imageUrl: 'https://d32dm0rphc51dk.cloudfront.net/c5mj0_9eQ9cgFiz4XrF8WA/large.jpg'
-  }
-];
+// Artsy API credentials
+const clientID = process.env.ARTSY_CLIENT_ID;
+const clientSecret = process.env.ARTSY_CLIENT_SECRET;
 
-// Mock data for artworks
-const mockArtworks = {
-  'pablo-picasso': [
-    {
-      id: 'picasso-guernica',
-      title: 'Guernica',
-      date: '1937',
-      medium: 'Oil on canvas',
-      dimensions: '349.3 × 776.6 cm',
-      imageUrl: 'https://d32dm0rphc51dk.cloudfront.net/ixwMXu7J_RHhpY-w4kDNpA/large.jpg'
-    },
-    {
-      id: 'picasso-les-demoiselles',
-      title: 'Les Demoiselles d\'Avignon',
-      date: '1907',
-      medium: 'Oil on canvas',
-      dimensions: '243.9 × 233.7 cm',
-      imageUrl: 'https://d32dm0rphc51dk.cloudfront.net/l6t_jrJQm8QwlrKr0XNE8w/large.jpg'
+if (!clientID || !clientSecret) {
+  console.error('Error: Artsy API credentials not found in .env file');
+  console.error('Please make sure ARTSY_CLIENT_ID and ARTSY_CLIENT_SECRET are set in your .env file');
+}
+
+let accessToken = null;
+let tokenExpiry = null;
+
+// Function to get Artsy API token
+async function getArtsyToken() {
+  try {
+    // Check if token is still valid
+    if (accessToken && tokenExpiry && new Date() < tokenExpiry) {
+      console.log('Using existing token (valid until:', tokenExpiry, ')');
+      return accessToken;
     }
-  ],
-  'vincent-van-gogh': [
-    {
-      id: 'van-gogh-starry-night',
-      title: 'The Starry Night',
-      date: '1889',
-      medium: 'Oil on canvas',
-      dimensions: '73.7 × 92.1 cm',
-      imageUrl: 'https://d32dm0rphc51dk.cloudfront.net/qJ8Xy2O4cVVMoTAkUmUEEA/large.jpg'
-    },
-    {
-      id: 'van-gogh-sunflowers',
-      title: 'Sunflowers',
-      date: '1888',
-      medium: 'Oil on canvas',
-      dimensions: '92.1 × 73 cm',
-      imageUrl: 'https://d32dm0rphc51dk.cloudfront.net/Z2rT5Ck9_qYdnkCnOW9Qpw/large.jpg'
+
+    console.log('Requesting new Artsy API token...');
+    
+    // Get new token
+    const response = await axios({
+      method: 'post',
+      url: 'https://api.artsy.net/api/tokens/xapp_token',
+      data: {
+        client_id: clientID,
+        client_secret: clientSecret
+      }
+    });
+
+    console.log('Token response status:', response.status);
+    
+    if (response.data && response.data.token) {
+      accessToken = response.data.token;
+      // Set expiry time (typically 60 days, but we'll set it to expire in 24 hours to be safe)
+      tokenExpiry = new Date(new Date().getTime() + 24 * 60 * 60 * 1000);
+      console.log('Successfully obtained new token, valid until:', tokenExpiry);
+      return accessToken;
+    } else {
+      console.error('Invalid token response:', response.data);
+      throw new Error('Invalid token response from Artsy API');
     }
-  ],
-  'claude-monet': [
-    {
-      id: 'monet-water-lilies',
-      title: 'Water Lilies',
-      date: '1919',
-      medium: 'Oil on canvas',
-      dimensions: '100 × 200 cm',
-      imageUrl: 'https://d32dm0rphc51dk.cloudfront.net/qJ8Xy2O4cVVMoTAkUmUEEA/large.jpg'
-    },
-    {
-      id: 'monet-impression-sunrise',
-      title: 'Impression, Sunrise',
-      date: '1872',
-      medium: 'Oil on canvas',
-      dimensions: '48 × 63 cm',
-      imageUrl: 'https://d32dm0rphc51dk.cloudfront.net/3M95JnbrJXN-X3KYYgg-vw/large.jpg'
+  } catch (error) {
+    console.error('Error getting Artsy token:', error.message);
+    if (error.response) {
+      console.error('Response status:', error.response.status);
+      console.error('Response data:', error.response.data);
     }
-  ],
-  'leonardo-da-vinci': [
-    {
-      id: 'da-vinci-mona-lisa',
-      title: 'Mona Lisa',
-      date: '1503-1519',
-      medium: 'Oil on poplar panel',
-      dimensions: '77 × 53 cm',
-      imageUrl: 'https://d32dm0rphc51dk.cloudfront.net/miBQR7tQdJWpuPfJaGzlYA/large.jpg'
-    },
-    {
-      id: 'da-vinci-last-supper',
-      title: 'The Last Supper',
-      date: '1495-1498',
-      medium: 'Tempera on gesso, pitch, and mastic',
-      dimensions: '460 × 880 cm',
-      imageUrl: 'https://d32dm0rphc51dk.cloudfront.net/jImHPm-B_7sKGdUjJlfJHg/large.jpg'
-    }
-  ],
-  'frida-kahlo': [
-    {
-      id: 'kahlo-two-fridas',
-      title: 'The Two Fridas',
-      date: '1939',
-      medium: 'Oil on canvas',
-      dimensions: '173.5 × 173 cm',
-      imageUrl: 'https://d32dm0rphc51dk.cloudfront.net/wJ6Xt_R2aV-rKfzwrr0cXw/large.jpg'
-    },
-    {
-      id: 'kahlo-self-portrait',
-      title: 'Self-Portrait with Thorn Necklace and Hummingbird',
-      date: '1940',
-      medium: 'Oil on canvas',
-      dimensions: '61.25 × 47 cm',
-      imageUrl: 'https://d32dm0rphc51dk.cloudfront.net/0-QXL43Ox2QgwZ0nNtQlUQ/large.jpg'
-    }
-  ]
-};
+    throw error;
+  }
+}
 
 // API endpoint to search for artists
 app.get('/api/artists/search', async (req, res) => {
@@ -177,26 +89,31 @@ app.get('/api/artists/search', async (req, res) => {
       return res.status(400).json({ error: 'Search query is required' });
     }
 
-    // Filter mock artists based on the query
-    const filteredArtists = mockArtists.filter(artist => 
-      artist.name.toLowerCase().includes(query.toLowerCase()) || 
-      artist.nationality.toLowerCase().includes(query.toLowerCase())
-    );
-
-    // Format the response to match the expected format
-    const response = {
-      _embedded: {
-        results: filteredArtists.map(artist => ({
-          ...artist,
-          type: 'Artist'
-        }))
+    const token = await getArtsyToken();
+    const response = await axios.get(`https://api.artsy.net/api/search`, {
+      headers: {
+        'X-Xapp-Token': token
+      },
+      params: {
+        q: query,
+        type: 'artist',
+        size: 10
       }
-    };
+    });
 
-    res.json(response);
+    console.log('Artist search successful for query:', query);
+    res.json(response.data);
   } catch (error) {
     console.error('Error searching artists:', error.message);
-    res.status(500).json({ error: 'Failed to search artists', details: error.message });
+    if (error.response) {
+      console.error('Response status:', error.response.status);
+      console.error('Response data:', error.response.data);
+    }
+    res.status(error.response?.status || 500).json({ 
+      error: 'Failed to search artists', 
+      details: error.message,
+      status: error.response?.status
+    });
   }
 });
 
@@ -204,16 +121,27 @@ app.get('/api/artists/search', async (req, res) => {
 app.get('/api/artists/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    const artist = mockArtists.find(a => a.id === id);
+    const token = await getArtsyToken();
     
-    if (!artist) {
-      return res.status(404).json({ error: 'Artist not found' });
-    }
+    const response = await axios.get(`https://api.artsy.net/api/artists/${id}`, {
+      headers: {
+        'X-Xapp-Token': token
+      }
+    });
 
-    res.json(artist);
+    console.log('Successfully retrieved details for artist ID:', id);
+    res.json(response.data);
   } catch (error) {
     console.error('Error getting artist details:', error.message);
-    res.status(500).json({ error: 'Failed to get artist details', details: error.message });
+    if (error.response) {
+      console.error('Response status:', error.response.status);
+      console.error('Response data:', error.response.data);
+    }
+    res.status(error.response?.status || 500).json({ 
+      error: 'Failed to get artist details', 
+      details: error.message,
+      status: error.response?.status
+    });
   }
 });
 
@@ -221,19 +149,31 @@ app.get('/api/artists/:id', async (req, res) => {
 app.get('/api/artists/:id/artworks', async (req, res) => {
   try {
     const { id } = req.params;
-    const artworks = mockArtworks[id] || [];
+    const token = await getArtsyToken();
     
-    // Format the response to match the expected format
-    const response = {
-      _embedded: {
-        artworks: artworks
+    const response = await axios.get(`https://api.artsy.net/api/artworks`, {
+      headers: {
+        'X-Xapp-Token': token
+      },
+      params: {
+        artist_id: id,
+        size: 10
       }
-    };
+    });
 
-    res.json(response);
+    console.log('Successfully retrieved artworks for artist ID:', id);
+    res.json(response.data);
   } catch (error) {
     console.error('Error getting artist artworks:', error.message);
-    res.status(500).json({ error: 'Failed to get artist artworks', details: error.message });
+    if (error.response) {
+      console.error('Response status:', error.response.status);
+      console.error('Response data:', error.response.data);
+    }
+    res.status(error.response?.status || 500).json({ 
+      error: 'Failed to get artist artworks', 
+      details: error.message,
+      status: error.response?.status
+    });
   }
 });
 
@@ -241,25 +181,63 @@ app.get('/api/artists/:id/artworks', async (req, res) => {
 app.get('/api/artworks/:id', async (req, res) => {
   try {
     const { id } = req.params;
+    const token = await getArtsyToken();
     
-    // Find the artwork in all artists' artworks
-    let artwork = null;
-    for (const artistId in mockArtworks) {
-      const found = mockArtworks[artistId].find(a => a.id === id);
-      if (found) {
-        artwork = found;
-        break;
+    const response = await axios.get(`https://api.artsy.net/api/artworks/${id}`, {
+      headers: {
+        'X-Xapp-Token': token
       }
-    }
-    
-    if (!artwork) {
-      return res.status(404).json({ error: 'Artwork not found' });
-    }
+    });
 
-    res.json(artwork);
+    console.log('Successfully retrieved details for artwork ID:', id);
+    res.json(response.data);
   } catch (error) {
     console.error('Error getting artwork details:', error.message);
-    res.status(500).json({ error: 'Failed to get artwork details', details: error.message });
+    if (error.response) {
+      console.error('Response status:', error.response.status);
+      console.error('Response data:', error.response.data);
+    }
+    res.status(error.response?.status || 500).json({ 
+      error: 'Failed to get artwork details', 
+      details: error.message,
+      status: error.response?.status
+    });
+  }
+});
+
+// API endpoint to get artwork categories (genes)
+app.get('/api/genes', async (req, res) => {
+  try {
+    const { artwork_id } = req.query;
+    
+    if (!artwork_id) {
+      return res.status(400).json({ error: 'Artwork ID is required' });
+    }
+    
+    const token = await getArtsyToken();
+    
+    const response = await axios.get(`https://api.artsy.net/api/genes`, {
+      headers: {
+        'X-Xapp-Token': token
+      },
+      params: {
+        artwork_id: artwork_id
+      }
+    });
+
+    console.log('Successfully retrieved categories for artwork ID:', artwork_id);
+    res.json(response.data);
+  } catch (error) {
+    console.error('Error getting artwork categories:', error.message);
+    if (error.response) {
+      console.error('Response status:', error.response.status);
+      console.error('Response data:', error.response.data);
+    }
+    res.status(error.response?.status || 500).json({ 
+      error: 'Failed to get artwork categories', 
+      details: error.message,
+      status: error.response?.status
+    });
   }
 });
 
