@@ -1,7 +1,37 @@
 <div class="container-fluid">
   <header class="bg-dark text-white py-3 mb-4">
     <div class="container">
-      <h1 class="text-center">Artsy Artist Search</h1>
+      <div class="row align-items-center">
+        <div class="col-md-6">
+          <h1 class="mb-0">Artsy Artist Search</h1>
+        </div>
+        <div class="col-md-6">
+          <nav class="navbar navbar-expand navbar-dark">
+            <div class="container-fluid">
+              <ul class="navbar-nav ms-auto">
+                <li class="nav-item">
+                  <a class="nav-link" routerLink="/" routerLinkActive="active">Home</a>
+                </li>
+                <li class="nav-item" *ngIf="!isLoggedIn">
+                  <a class="nav-link" routerLink="/login" routerLinkActive="active">Login</a>
+                </li>
+                <li class="nav-item" *ngIf="!isLoggedIn">
+                  <a class="nav-link" routerLink="/register" routerLinkActive="active">Register</a>
+                </li>
+                <li class="nav-item" *ngIf="isLoggedIn">
+                  <a class="nav-link" routerLink="/profile" routerLinkActive="active">Profile</a>
+                </li>
+                <li class="nav-item" *ngIf="isLoggedIn">
+                  <a class="nav-link" routerLink="/favorites" routerLinkActive="active">Favorites</a>
+                </li>
+                <li class="nav-item" *ngIf="isLoggedIn">
+                  <a class="nav-link" href="#" (click)="logout($event)">Logout</a>
+                </li>
+              </ul>
+            </div>
+          </nav>
+        </div>
+      </div>
     </div>
   </header>
 

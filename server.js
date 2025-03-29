@@ -1,262 +1,148 @@
 const express = require('express');
-const axios = require('axios');
-const cors = require('cors');
+const mongoose = require('mongoose');
+const cookieParser = require('cookie-parser');
 const path = require('path');
-const dotenv = require('dotenv');
 const fs = require('fs');
+const cors = require('cors');
+const axios = require('axios');
+const auth = require('./middleware/auth');
 
 // Load environment variables
-dotenv.config();
+require('dotenv').config();
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+
+// Connect to MongoDB
+mongoose.connect(process.env.MONGODB_URI, {
+  useNewUrlParser: true,
+  useUnifiedTopology: true
+})
+.then(() => console.log('MongoDB connected'))
+.catch(err => {
+  console.error('MongoDB connection error:', err);
+  process.exit(1);
+});
 
 // Middleware
-app.use(cors());
+app.use(cookieParser());
 app.use(express.json());
+app.use(cors({
+  origin: process.env.NODE_ENV === 'production' ? false : 'http://localhost:4200',
+  credentials: true
+}));
+
+// Serve static files from the public directory
+app.use(express.static(path.join(__dirname, 'public')));
 
 // Check if the dist directory exists
-const distPath = path.join(__dirname, 'dist/artsy-app');
+const distPath = path.join(__dirname, 'dist/artsy-app/browser');
 const distExists = fs.existsSync(distPath);
 
 if (distExists) {
   console.log('Serving static files from:', distPath);
   app.use(express.static(distPath));
 } else {
-  console.log('Warning: dist/artsy-app directory not found. Run "npm run build" to create it.');
+  console.log('Warning: dist/artsy-app/browser directory not found. Run "npm run build" to create it.');
 }
 
-// Artsy API credentials
-const clientID = process.env.ARTSY_CLIENT_ID;
-const clientSecret = process.env.ARTSY_CLIENT_SECRET;
+// API Routes
+app.use('/api/auth', require('./routes/auth'));
+app.use('/api/favorites', require('./routes/favorites'));
 
-if (!clientID || !clientSecret) {
-  console.error('Error: Artsy API credentials not found in .env file');
-  console.error('Please make sure ARTSY_CLIENT_ID and ARTSY_CLIENT_SECRET are set in your .env file');
-}
+// Artsy API token management
+let artsyToken = null;
+let tokenExpiration = null;
 
-let accessToken = null;
-let tokenExpiry = null;
-
-// Function to get Artsy API token
 async function getArtsyToken() {
   try {
-    // Check if token is still valid
-    if (accessToken && tokenExpiry && new Date() < tokenExpiry) {
-      console.log('Using existing token (valid until:', tokenExpiry, ')');
-      return accessToken;
+    // Check if we have a valid token
+    if (artsyToken && tokenExpiration && Date.now() < tokenExpiration) {
+      return artsyToken;
     }
 
-    console.log('Requesting new Artsy API token...');
-    
     // Get new token
-    const response = await axios({
-      method: 'post',
-      url: 'https://api.artsy.net/api/tokens/xapp_token',
-      data: {
-        client_id: clientID,
-        client_secret: clientSecret
-      }
+    const response = await axios.post('https://api.artsy.net/api/tokens/xapp_token', {
+      client_id: process.env.ARTSY_CLIENT_ID,
+      client_secret: process.env.ARTSY_CLIENT_SECRET
     });
 
-    console.log('Token response status:', response.status);
-    
-    if (response.data && response.data.token) {
-      accessToken = response.data.token;
-      // Set expiry time (typically 60 days, but we'll set it to expire in 24 hours to be safe)
-      tokenExpiry = new Date(new Date().getTime() + 24 * 60 * 60 * 1000);
-      console.log('Successfully obtained new token, valid until:', tokenExpiry);
-      return accessToken;
-    } else {
-      console.error('Invalid token response:', response.data);
-      throw new Error('Invalid token response from Artsy API');
-    }
+    artsyToken = response.data.token;
+    tokenExpiration = Date.now() + (response.data.expires_in * 1000);
+    return artsyToken;
   } catch (error) {
-    console.error('Error getting Artsy token:', error.message);
-    if (error.response) {
-      console.error('Response status:', error.response.status);
-      console.error('Response data:', error.response.data);
-    }
+    console.error('Error getting Artsy token:', error);
     throw error;
   }
 }
 
-// API endpoint to search for artists
+// Artist search endpoint
 app.get('/api/artists/search', async (req, res) => {
   try {
     const { query } = req.query;
     if (!query) {
-      return res.status(400).json({ error: 'Search query is required' });
+      return res.status(400).json({ msg: 'Search query is required' });
     }
 
     const token = await getArtsyToken();
-    const response = await axios.get(`https://api.artsy.net/api/search`, {
+    const response = await axios.get(`https://api.artsy.net/api/search?q=${encodeURIComponent(query)}&type=artist`, {
       headers: {
         'X-Xapp-Token': token
-      },
-      params: {
-        q: query,
-        type: 'artist',
-        size: 10
       }
     });
 
-    console.log('Artist search successful for query:', query);
-    res.json(response.data);
+    res.json(response.data._embedded.results);
   } catch (error) {
-    console.error('Error searching artists:', error.message);
-    if (error.response) {
-      console.error('Response status:', error.response.status);
-      console.error('Response data:', error.response.data);
-    }
-    res.status(error.response?.status || 500).json({ 
-      error: 'Failed to search artists', 
-      details: error.message,
-      status: error.response?.status
-    });
+    console.error('Artist search error:', error);
+    res.status(500).json({ msg: 'Server error during artist search' });
   }
 });
 
-// API endpoint to get artist details
+// Artist details endpoint
 app.get('/api/artists/:id', async (req, res) => {
   try {
-    const { id } = req.params;
     const token = await getArtsyToken();
-    
-    const response = await axios.get(`https://api.artsy.net/api/artists/${id}`, {
+    const response = await axios.get(`https://api.artsy.net/api/artists/${req.params.id}`, {
       headers: {
         'X-Xapp-Token': token
       }
     });
 
-    console.log('Successfully retrieved details for artist ID:', id);
     res.json(response.data);
   } catch (error) {
-    console.error('Error getting artist details:', error.message);
-    if (error.response) {
-      console.error('Response status:', error.response.status);
-      console.error('Response data:', error.response.data);
-    }
-    res.status(error.response?.status || 500).json({ 
-      error: 'Failed to get artist details', 
-      details: error.message,
-      status: error.response?.status
-    });
+    console.error('Artist details error:', error);
+    res.status(500).json({ msg: 'Server error getting artist details' });
   }
 });
 
-// API endpoint to get artist's artworks
-app.get('/api/artists/:id/artworks', async (req, res) => {
+// Similar artists endpoint (protected)
+app.get('/api/artists/:id/similar', auth, async (req, res) => {
   try {
-    const { id } = req.params;
     const token = await getArtsyToken();
-    
-    const response = await axios.get(`https://api.artsy.net/api/artworks`, {
-      headers: {
-        'X-Xapp-Token': token
-      },
-      params: {
-        artist_id: id,
-        size: 10
-      }
-    });
-
-    console.log('Successfully retrieved artworks for artist ID:', id);
-    res.json(response.data);
-  } catch (error) {
-    console.error('Error getting artist artworks:', error.message);
-    if (error.response) {
-      console.error('Response status:', error.response.status);
-      console.error('Response data:', error.response.data);
-    }
-    res.status(error.response?.status || 500).json({ 
-      error: 'Failed to get artist artworks', 
-      details: error.message,
-      status: error.response?.status
-    });
-  }
-});
-
-// API endpoint to get artwork details
-app.get('/api/artworks/:id', async (req, res) => {
-  try {
-    const { id } = req.params;
-    const token = await getArtsyToken();
-    
-    const response = await axios.get(`https://api.artsy.net/api/artworks/${id}`, {
+    const response = await axios.get(`https://api.artsy.net/api/artists/${req.params.id}/similar`, {
       headers: {
         'X-Xapp-Token': token
       }
     });
 
-    console.log('Successfully retrieved details for artwork ID:', id);
-    res.json(response.data);
+    res.json(response.data._embedded.artists);
   } catch (error) {
-    console.error('Error getting artwork details:', error.message);
-    if (error.response) {
-      console.error('Response status:', error.response.status);
-      console.error('Response data:', error.response.data);
-    }
-    res.status(error.response?.status || 500).json({ 
-      error: 'Failed to get artwork details', 
-      details: error.message,
-      status: error.response?.status
-    });
+    console.error('Similar artists error:', error);
+    res.status(500).json({ msg: 'Server error getting similar artists' });
   }
 });
 
-// API endpoint to get artwork categories (genes)
-app.get('/api/genes', async (req, res) => {
-  try {
-    const { artwork_id } = req.query;
-    
-    if (!artwork_id) {
-      return res.status(400).json({ error: 'Artwork ID is required' });
-    }
-    
-    const token = await getArtsyToken();
-    
-    const response = await axios.get(`https://api.artsy.net/api/genes`, {
-      headers: {
-        'X-Xapp-Token': token
-      },
-      params: {
-        artwork_id: artwork_id
-      }
-    });
-
-    console.log('Successfully retrieved categories for artwork ID:', artwork_id);
-    res.json(response.data);
-  } catch (error) {
-    console.error('Error getting artwork categories:', error.message);
-    if (error.response) {
-      console.error('Response status:', error.response.status);
-      console.error('Response data:', error.response.data);
-    }
-    res.status(error.response?.status || 500).json({ 
-      error: 'Failed to get artwork categories', 
-      details: error.message,
-      status: error.response?.status
-    });
-  }
-});
-
-// Catch-all route to serve the Angular app
+// Serve Angular app for all other routes
 app.get('*', (req, res) => {
   if (distExists) {
     res.sendFile(path.join(distPath, 'index.html'));
   } else {
-    res.status(404).send('Application not built. Please run "npm run build" to create the dist directory.');
+    res.sendFile(path.join(__dirname, 'public', 'login.html'));
   }
 });
 
-// Start the server
+const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
-  console.log(`API available at http://localhost:${PORT}/api`);
-  if (distExists) {
-    console.log(`Frontend available at http://localhost:${PORT}`);
-  } else {
-    console.log(`Frontend not available - dist directory missing. Run "npm run build" first.`);
-  }
+  console.log('API available at http://localhost:' + PORT + '/api');
+  console.log('Frontend available at http://localhost:' + PORT);
 });

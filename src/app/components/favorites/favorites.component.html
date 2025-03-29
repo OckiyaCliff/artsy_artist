@@ -1,0 +1,57 @@
+<div class="container mt-5">
+  <div class="row">
+    <div class="col-12">
+      <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+          <h3 class="mb-0">My Favorites</h3>
+          <a routerLink="/profile" class="btn btn-outline-secondary btn-sm">Back to Profile</a>
+        </div>
+        <div class="card-body">
+          <!-- Loading spinner -->
+          <div *ngIf="isLoading" class="text-center my-5">
+            <div class="spinner-border text-primary" role="status">
+              <span class="visually-hidden">Loading...</span>
+            </div>
+            <p class="mt-2">Loading your favorite artists...</p>
+          </div>
+
+          <!-- Error message -->
+          <div *ngIf="errorMessage" class="alert alert-danger">
+            {{ errorMessage }}
+          </div>
+
+          <!-- No favorites message -->
+          <div *ngIf="!isLoading && (!favorites || favorites.length === 0)" class="text-center my-5">
+            <p class="lead">You haven't added any favorite artists yet.</p>
+            <a routerLink="/" class="btn btn-primary">Explore Artists</a>
+          </div>
+
+          <!-- Favorites list -->
+          <div *ngIf="!isLoading && favorites && favorites.length > 0" class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
+            <div *ngFor="let artist of favorites" class="col">
+              <div class="card h-100">
+                <div *ngIf="artist.image_url" class="card-img-top-container">
+                  <img [src]="artist.image_url" class="card-img-top" alt="{{ artist.name }}" style="object-fit: cover; height: 200px; width: 100%;">
+                </div>
+                <div *ngIf="!artist.image_url" class="card-img-top bg-light d-flex align-items-center justify-content-center" style="height: 200px;">
+                  <span class="text-muted">No image available</span>
+                </div>
+                <div class="card-body">
+                  <h5 class="card-title">{{ artist.name }}</h5>
+                  <p class="card-text text-muted">{{ artist.nationality || 'Unknown nationality' }}</p>
+                  <p class="card-text">{{ artist.birthday ? (artist.birthday + (artist.deathday ? ' - ' + artist.deathday : '')) : 'Birth date unknown' }}</p>
+                </div>
+                <div class="card-footer bg-transparent d-flex justify-content-between">
+                  <a [routerLink]="['/artist', artist.id]" class="btn btn-sm btn-outline-primary">View Details</a>
+                  <button (click)="removeFromFavorites(artist.id)" class="btn btn-sm btn-outline-danger">
+                    <i class="bi bi-heart-fill"></i> Remove
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

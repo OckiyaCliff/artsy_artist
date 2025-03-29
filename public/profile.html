@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Artsy Artist Search - Profile</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            padding-top: 40px;
+            background-color: #f5f5f5;
+        }
+        .profile-container {
+            max-width: 600px;
+            padding: 20px;
+            margin: 0 auto;
+            background-color: white;
+            border-radius: 5px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        .profile-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        .profile-avatar {
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            margin-right: 20px;
+            object-fit: cover;
+        }
+        .profile-info {
+            flex: 1;
+        }
+        .profile-info h2 {
+            margin-bottom: 5px;
+        }
+        .profile-info p {
+            color: #666;
+            margin-bottom: 0;
+        }
+        .nav-links {
+            margin-top: 20px;
+            display: flex;
+            justify-content: space-between;
+        }
+        .favorites-section {
+            margin-top: 30px;
+        }
+        .favorites-section h3 {
+            margin-bottom: 15px;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 10px;
+        }
+        .artist-card {
+            margin-bottom: 15px;
+            padding: 10px;
+            border: 1px solid #eee;
+            border-radius: 5px;
+            display: flex;
+            align-items: center;
+        }
+        .artist-image {
+            width: 60px;
+            height: 60px;
+            border-radius: 5px;
+            margin-right: 15px;
+            object-fit: cover;
+        }
+        .artist-info {
+            flex: 1;
+        }
+        .artist-info h5 {
+            margin-bottom: 5px;
+        }
+        .artist-info p {
+            color: #666;
+            margin-bottom: 0;
+            font-size: 0.9rem;
+        }
+        .remove-btn {
+            color: #dc3545;
+            cursor: pointer;
+            background: none;
+            border: none;
+            font-size: 1.2rem;
+        }
+        .no-favorites {
+            color: #666;
+            font-style: italic;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="profile-container">
+            <div id="error-message" class="alert alert-danger" style="display: none;"></div>
+            
+            <div class="profile-header">
+                <img id="profile-avatar" src="https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp" alt="Profile Avatar" class="profile-avatar">
+                <div class="profile-info">
+                    <h2 id="profile-name">Loading...</h2>
+                    <p id="profile-email">Loading...</p>
+                </div>
+            </div>
+            
+            <div class="nav-links">
+                <a href="/" class="btn btn-outline-primary">Home</a>
+                <button id="logout-btn" class="btn btn-outline-danger">Logout</button>
+            </div>
+            
+            <div class="favorites-section">
+                <h3>Your Favorite Artists</h3>
+                <div id="favorites-container">
+                    <p class="no-favorites">Loading your favorites...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Check if user is logged in
+        async function checkAuth() {
+            try {
+                const response = await fetch('/api/auth/me', {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    credentials: 'include'
+                });
+                
+                if (!response.ok) {
+                    // Redirect to login if not authenticated
+                    window.location.href = '/login.html';
+                    return null;
+                }
+                
+                const userData = await response.json();
+                return userData;
+            } catch (error) {
+                console.error('Auth check error:', error);
+                window.location.href = '/login.html';
+                return null;
+            }
+        }
+        
+        // Load user profile data
+        async function loadProfile() {
+            const user = await checkAuth();
+            if (!user) return;
+            
+            document.getElementById('profile-name').textContent = user.fullname;
+            document.getElementById('profile-email').textContent = user.email;
+            
+            // Set Gravatar image
+            if (user.avatar) {
+                document.getElementById('profile-avatar').src = user.avatar;
+            }
+            
+            // Load favorites
+            loadFavorites();
+        }
+        
+        // Load user's favorite artists
+        async function loadFavorites() {
+            try {
+                const response = await fetch('/api/favorites', {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    credentials: 'include'
+                });
+                
+                if (!response.ok) {
+                    throw new Error('Failed to load favorites');
+                }
+                
+                const favoritesData = await response.json();
+                const favoritesContainer = document.getElementById('favorites-container');
+                
+                if (favoritesData.length === 0) {
+                    favoritesContainer.innerHTML = '<p class="no-favorites">You haven\'t added any favorite artists yet.</p>';
+                    return;
+                }
+                
+                let favoritesHTML = '';
+                
+                favoritesData.forEach(artist => {
+                    const imageUrl = artist.thumbnail || 'https://via.placeholder.com/60x60?text=No+Image';
+                    
+                    favoritesHTML += `
+                        <div class="artist-card" data-id="${artist.id}">
+                            <img src="${imageUrl}" alt="${artist.name}" class="artist-image">
+                            <div class="artist-info">
+                                <h5>${artist.name}</h5>
+                                <p>${artist.nationality || 'Unknown nationality'} ${artist.birthday ? '· ' + artist.birthday : ''}</p>
+                            </div>
+                            <button class="remove-btn" onclick="removeFavorite('${artist.id}')">×</button>
+                        </div>
+                    `;
+                });
+                
+                favoritesContainer.innerHTML = favoritesHTML;
+            } catch (error) {
+                console.error('Load favorites error:', error);
+                document.getElementById('favorites-container').innerHTML = '<p class="no-favorites">Failed to load favorites. Please try again later.</p>';
+            }
+        }
+        
+        // Remove artist from favorites
+        async function removeFavorite(artistId) {
+            try {
+                const response = await fetch(`/api/favorites/remove?artistId=${encodeURIComponent(artistId)}`, {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    credentials: 'include'
+                });
+                
+                if (!response.ok) {
+                    throw new Error('Failed to remove favorite');
+                }
+                
+                // Remove the artist card from the DOM
+                const artistCard = document.querySelector(`.artist-card[data-id="${artistId}"]`);
+                if (artistCard) {
+                    artistCard.remove();
+                }
+                
+                // Check if there are no more favorites
+                const favoritesContainer = document.getElementById('favorites-container');
+                if (favoritesContainer.children.length === 0) {
+                    favoritesContainer.innerHTML = '<p class="no-favorites">You haven\'t added any favorite artists yet.</p>';
+                }
+            } catch (error) {
+                console.error('Remove favorite error:', error);
+                document.getElementById('error-message').textContent = 'Failed to remove favorite. Please try again.';
+                document.getElementById('error-message').style.display = 'block';
+                setTimeout(() => {
+                    document.getElementById('error-message').style.display = 'none';
+                }, 3000);
+            }
+        }
+        
+        // Logout function
+        document.getElementById('logout-btn').addEventListener('click', async function() {
+            try {
+                const response = await fetch('/api/auth/logout', {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    credentials: 'include'
+                });
+                
+                if (response.ok) {
+                    window.location.href = '/login.html';
+                } else {
+                    throw new Error('Logout failed');
+                }
+            } catch (error) {
+                console.error('Logout error:', error);
+                document.getElementById('error-message').textContent = 'Logout failed. Please try again.';
+                document.getElementById('error-message').style.display = 'block';
+            }
+        });
+        
+        // Load profile when page loads
+        window.addEventListener('DOMContentLoaded', loadProfile);
+    </script>
+</body>
+</html>

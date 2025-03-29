@@ -1,0 +1,62 @@
+<div class="container mt-5">
+  <div class="row justify-content-center">
+    <div class="col-md-6">
+      <div class="card">
+        <div class="card-header">
+          <h3 class="text-center">Login</h3>
+        </div>
+        <div class="card-body">
+          <form [formGroup]="loginForm" (ngSubmit)="onSubmit()">
+            <div class="mb-3">
+              <label for="email" class="form-label">Email address</label>
+              <input
+                type="email"
+                id="email"
+                formControlName="email"
+                class="form-control"
+                placeholder="Enter email"
+                [ngClass]="{ 'is-invalid': f['email'].touched && (f['email'].errors || errorMessage) }"
+              />
+              <div *ngIf="f['email'].touched && f['email'].errors" class="invalid-feedback">
+                <div *ngIf="f['email'].errors['required']">Email is required.</div>
+                <div *ngIf="f['email'].errors['email']">Email must be valid.</div>
+              </div>
+              <div *ngIf="errorMessage && errorMessage.includes('email')" class="text-danger small mt-1">
+                Email must be valid.
+              </div>
+            </div>
+            <div class="mb-3">
+              <label for="password" class="form-label">Password</label>
+              <input
+                type="password"
+                id="password"
+                formControlName="password"
+                class="form-control"
+                placeholder="Password"
+                [ngClass]="{ 'is-invalid': f['password'].touched && (f['password'].errors || errorMessage) }"
+              />
+              <div *ngIf="f['password'].touched && f['password'].errors" class="invalid-feedback">
+                <div *ngIf="f['password'].errors['required']">Password is required.</div>
+              </div>
+              <div *ngIf="errorMessage && errorMessage.includes('password')" class="text-danger small mt-1">
+                Password is required.
+              </div>
+              <div *ngIf="errorMessage && errorMessage.includes('incorrect')" class="text-danger small mt-1">
+                Password or email is incorrect.
+              </div>
+            </div>
+            <div class="d-grid gap-2">
+              <button type="submit" class="btn btn-primary" [disabled]="loginForm.invalid || isLoading">
+                <span *ngIf="isLoading" class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+                Log in
+              </button>
+            </div>
+          </form>
+          <div class="mt-3 text-center">
+            <p>Don't have an account yet? <a routerLink="/register">Register</a></p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,84 @@
+<div class="container mt-5">
+  <div class="row justify-content-center">
+    <div class="col-md-6">
+      <div class="card">
+        <div class="card-header">
+          <h3 class="text-center">Profile</h3>
+        </div>
+        <div class="card-body">
+          <div *ngIf="errorMessage" class="alert alert-danger">
+            {{ errorMessage }}
+          </div>
+          
+          <div *ngIf="isLoading" class="text-center">
+            <div class="spinner-border" role="status">
+              <span class="visually-hidden">Loading...</span>
+            </div>
+          </div>
+          
+          <div *ngIf="user" class="text-center mb-4">
+            <img [src]="user.gravatarUrl" alt="Profile Image" class="rounded-circle mb-3" style="width: 100px; height: 100px;">
+            <h4>{{ user.username }}</h4>
+            <p class="text-muted">{{ user.email }}</p>
+          </div>
+
+          <div *ngIf="!isLoading && user" class="row">
+            <div class="col-md-12">
+              <div class="card mb-3">
+                <div class="card-header">
+                  <h5>Account Information</h5>
+                </div>
+                <div class="card-body">
+                  <p><strong>Username:</strong> {{ user.username }}</p>
+                  <p><strong>Email:</strong> {{ user.email }}</p>
+                  <p><strong>Account Created:</strong> {{ user.createdAt | date:'medium' }}</p>
+                  <p><strong>Favorites:</strong> {{ user.favorites?.length || 0 }} artists</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="d-grid gap-2">
+            <a routerLink="/favorites" class="btn btn-primary">
+              My Favorites
+            </a>
+            <button (click)="logout()" class="btn btn-outline-secondary">
+              Logout
+            </button>
+            <button (click)="confirmDelete()" class="btn btn-outline-danger">
+              Delete Account
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Delete Confirmation Modal -->
+  <div class="modal" tabindex="-1" [ngClass]="{'show d-block': showDeleteModal}" aria-modal="true" role="dialog">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Confirm Account Deletion</h5>
+          <button type="button" class="btn-close" (click)="cancelDelete()" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <p>Are you sure you want to delete your account? This action cannot be undone.</p>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" (click)="cancelDelete()">Cancel</button>
+          <button type="button" class="btn btn-danger" (click)="deleteAccount()">
+            <span *ngIf="isDeleting" class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+            Delete Account
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div *ngIf="showDeleteModal" class="modal-backdrop fade show"></div>
+
+  <!-- Not authenticated message -->
+  <div *ngIf="!isLoading && !user" class="text-center">
+    <p>You are not logged in. Please <a routerLink="/login">login</a> to view your profile.</p>
+  </div>
+</div>
